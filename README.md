@@ -38,9 +38,9 @@ The `JAVA PROJECTS` view allows you to manage your dependencies. More details ca
 - Lúc sử dụng **git commit -m "tin nhắn"** thì ở chỗ tin nhắn mấy ông liệt kê càng chi tiết càng tốt nha
 
 # Các công việc cần làm
-Di chuyển quân cờ
-Test chức năng ăn quân cờ 
-Hiển thị điểm trong game khi ăn quân cờ của đối thủ
-Tạo AI để chơi với máy
-Chức năng của Cài đặt
-Chức năng tái đấu
+- Di chuyển quân cờ
+- Test chức năng ăn quân cờ 
+- Hiển thị điểm trong game khi ăn quân cờ của đối thủ
+- Tạo AI để chơi với máy
+- Chức năng của Cài đặt
+- Chức năng tái đấu
