@@ -44,3 +44,4 @@ The `JAVA PROJECTS` view allows you to manage your dependencies. More details ca
 - Tạo AI để chơi với máy
 - Chức năng của Cài đặt
 - Chức năng tái đấu
+- Khi tốt sang được nhà đối thủ thì người chơi có thể cho tốt thành hậu, ngựa, tượng hoặc tịnh
