@@ -50,3 +50,4 @@ The `JAVA PROJECTS` view allows you to manage your dependencies. More details ca
 - Sửa lỗi hiển thị các nước đi có thể đi khi quân cờ đang che cho vua
 - Nhập thành
 - Tối ưu hoá code (Đang bị trường hợp di chuyển nhanh quá bị đứng)
+- Chức năng hoà cờ 
