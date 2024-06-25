@@ -38,12 +38,14 @@ The `JAVA PROJECTS` view allows you to manage your dependencies. More details ca
 - Lúc sử dụng **git commit -m "tin nhắn"** thì ở chỗ tin nhắn mấy ông liệt kê càng chi tiết càng tốt nha
 
 # Các công việc cần làm
-- Di chuyển quân cờ
-- Test chức năng ăn quân cờ 
+- Di chuyển quân cờ (Xong)
+- Test chức năng ăn quân cờ  (Xong)
 - Hiển thị điểm trong game khi ăn quân cờ của đối thủ
 - Tạo AI để chơi với máy
 - Chức năng của Cài đặt
-- Chức năng tái đấu
+- Chức năng tái đấu (Xong)
 - Khi tốt sang được nhà đối thủ thì người chơi có thể cho tốt thành hậu, ngựa, tượng hoặc tịnh
-- Khi vua bị đe doạ thì phải bảo vệ vua hoặc di chuyển vua
-- Làm điều kiện checkmate
+- Khi vua bị đe doạ thì phải bảo vệ vua hoặc di chuyển vua (Xong)
+- Làm điều kiện checkmate (xong)
+- Sửa lỗi hiển thị các nước đi có thể đi khi quân cờ đang che cho vua
+- Nhập thành
