@@ -21,9 +21,9 @@ public class Coordinate {
 
     @Override
     public int hashCode() {
-        return Objects.hash(row, col); // Sử dụng Objects.hash để tạo hashCode
+        return Objects.hash(row, col); 
     }
-    // Override the toString method to print row and column
+
     @Override
     public String toString() {
         return "(" + row + ", " + col + ")"; 

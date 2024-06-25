@@ -28,7 +28,7 @@ public class TrangChu extends JFrame {
     }
 
     private JPanel createHomePanel() {
-        String backgroundPath = "G:\\Programming\\LTJava\\ChessBoard\\lib\\images\\MAIN.jpg";
+        String backgroundPath = "G:\\Programming\\LTJava\\ChessGame\\lib\\images\\MAIN.jpg";
         BackgroundPanel panel = new BackgroundPanel(backgroundPath);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
     
@@ -106,7 +106,7 @@ public class TrangChu extends JFrame {
     }
     
     private JPanel createModePanel() {
-        BackgroundPanel panel = new BackgroundPanel("G:\\Programming\\LTJava\\ChessBoard\\lib\\images\\MAIN.jpg");
+        BackgroundPanel panel = new BackgroundPanel("G:\\Programming\\LTJava\\ChessGame\\lib\\images\\MAIN.jpg");
         panel.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;

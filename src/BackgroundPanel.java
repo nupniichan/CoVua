@@ -6,6 +6,7 @@ class BackgroundPanel extends JPanel {
 
     public BackgroundPanel(String filePath) {
         backgroundImage = new ImageIcon(filePath).getImage();
+        System.out.println("Đường dẫn file ảnh: " + filePath);
     }
 
     @Override
