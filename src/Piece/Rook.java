@@ -52,4 +52,8 @@ public class Rook extends Piece {
             return "Unknown";
         }
     }
+    @Override
+    public int getValue() {
+        return ROOK_POINT; 
+    }
 }

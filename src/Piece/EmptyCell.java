@@ -28,4 +28,8 @@ public class EmptyCell extends Piece{
     public String getColorString(){
         return "Empty";
     }
+    @Override
+    public int getValue() {
+        return 0; 
+    }
 }

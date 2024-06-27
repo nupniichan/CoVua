@@ -45,4 +45,8 @@ public class Knight extends Piece {
             return "Unknown";
         }
     }
+    @Override
+    public int getValue() {
+        return KNIGHT_POINT; 
+    }
 }

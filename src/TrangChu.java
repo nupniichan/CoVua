@@ -1,7 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import Piece.*;
 import java.awt.event.ActionListener;
 
 public class TrangChu extends JFrame {
@@ -16,11 +15,11 @@ public class TrangChu extends JFrame {
 
         JPanel homePanel = createHomePanel();
         JPanel modePanel = createModePanel();
-        JPanel chessBoardPanel = new ChessBoard();
+        // Không cần khởi tạo ChessBoard ở đây nữa
 
         mainPanel.add(homePanel, "home");
         mainPanel.add(modePanel, "mode");
-        mainPanel.add(chessBoardPanel, "chessBoard");
+        // Không cần thêm chessBoardPanel vào đây nữa
 
         add(mainPanel);
 
@@ -124,10 +123,23 @@ public class TrangChu extends JFrame {
         JButton exitButton = new JButton("Thoát");
         exitButton.setFont(new Font("Arial", Font.PLAIN, 24));
     
-        onlineButton.addActionListener(e -> cardLayout.show(mainPanel, "chessBoard"));
-        offlineButton.addActionListener(e -> cardLayout.show(mainPanel, "chessBoard"));
-        aiButton.addActionListener(e -> cardLayout.show(mainPanel, "chessBoard"));
-        exitButton.addActionListener(e -> System.exit(0));
+        onlineButton.addActionListener(e -> {
+            // Ví dụ: Chuyển đến panel "chessBoard" (bạn cần định nghĩa panel này)
+            cardLayout.show(mainPanel, "chessBoard");
+        });
+
+        offlineButton.addActionListener(e -> {
+            // Khởi tạo ChessBoard cho chế độ chơi offline
+            JPanel chessBoardPanel = new ChessBoard();
+            mainPanel.add(chessBoardPanel, "chessBoard");
+            cardLayout.show(mainPanel, "chessBoard");
+        });
+
+        aiButton.addActionListener(e -> {
+            JPanel aiPanel = new PlayWithAI(); 
+            mainPanel.add(aiPanel, "aiGame");
+            cardLayout.show(mainPanel, "aiGame");
+        });
     
         backButton.addActionListener(e -> cardLayout.show(mainPanel, "home"));
     

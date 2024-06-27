@@ -60,6 +60,8 @@ public abstract class Piece {
         return image;
     }
 
+    public abstract int getValue();
+    
     public boolean checkEmptyCell(Piece[][] board, int iRow, int iCol) {
         if (iRow < 0 || iRow > 7 || iCol < 0 || iCol > 7) {
             return false;

@@ -52,4 +52,8 @@ public class Bishop extends Piece {
             return "Unknown";
         }
     }
+    @Override
+    public int getValue() {
+        return BISHOP_POINT; 
+    }
 }

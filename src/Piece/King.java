@@ -76,4 +76,8 @@ public class King extends Piece {
             return "Unknown";
         }
     }
+    @Override
+    public int getValue() {
+        return KING_POINT; 
+    }
 }

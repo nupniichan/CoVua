@@ -55,4 +55,8 @@ public class Queen extends Piece {
             return "Unknown";
         }
     }
+    @Override
+    public int getValue() {
+        return QUEEN_POINT; 
+    }
 }
