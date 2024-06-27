@@ -44,7 +44,7 @@ The `JAVA PROJECTS` view allows you to manage your dependencies. More details ca
 - *Làm điều kiện checkmate (xong)*
 - *Chức năng tái đấu (Xong)*
 - Hiển thị điểm trong game khi ăn quân cờ của đối thủ
-- Tạo AI để chơi với máy
+- Tạo AI để chơi với máy (Xong)
 - Làm bảng phân công (Ưu tiên làm)
 - Chọn màu quân cờ chơi
 - Làm phần giải đố giống như chess

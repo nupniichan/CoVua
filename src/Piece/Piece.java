@@ -72,7 +72,7 @@ public abstract class Piece {
     public abstract List<Coordinate> getPossibleMove(Piece[][] board);
 
     private void loadImage() {
-        String imagePath = "G:\\Programming\\LTJava\\ChessGame\\lib\\images\\" +
+        String imagePath = "src\\main\\resources\\images\\" +
                 (color == WHITE ? "White" : "Black") + "_" +
                 getClass().getSimpleName() + ".png";
         this.image = new ImageIcon(imagePath);

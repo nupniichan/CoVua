@@ -27,7 +27,7 @@ public class TrangChu extends JFrame {
     }
 
     private JPanel createHomePanel() {
-        String backgroundPath = "G:\\Programming\\LTJava\\ChessGame\\lib\\images\\MAIN.jpg";
+        String backgroundPath = "src\\main\\resources\\images\\MAIN.jpg";
         BackgroundPanel panel = new BackgroundPanel(backgroundPath);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
     
@@ -105,7 +105,8 @@ public class TrangChu extends JFrame {
     }
     
     private JPanel createModePanel() {
-        BackgroundPanel panel = new BackgroundPanel("G:\\Programming\\LTJava\\ChessGame\\lib\\images\\MAIN.jpg");
+        BackgroundPanel panel = new BackgroundPanel("src\\main\\resources\\images\\MAIN.jpg");
+        System.out.println();
         panel.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -136,6 +137,7 @@ public class TrangChu extends JFrame {
         });
 
         aiButton.addActionListener(e -> {
+            // Khởi tạo PlayWithAI cho chế độ chơi với máy
             JPanel aiPanel = new PlayWithAI(); 
             mainPanel.add(aiPanel, "aiGame");
             cardLayout.show(mainPanel, "aiGame");
