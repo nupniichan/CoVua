@@ -15,7 +15,7 @@ public class Rook extends Piece {
     @Override
     public List<Coordinate> getPossibleMove(Piece[][] board) {
         List<Coordinate> possibleMoves = new ArrayList<>();
-        int[][] directions = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}}; // 4 hướng của Xe
+        int[][] directions = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}}; 
 
         for (int[] dir : directions) {
             int row = coordinate.row + dir[0];
@@ -26,11 +26,11 @@ public class Rook extends Piece {
                     possibleMoves.add(new Coordinate(row, col));
                 } else {
                     if (board[row][col].getColor() != color) {
-                        possibleMoves.add(new Coordinate(row, col)); // Ăn quân
+                        possibleMoves.add(new Coordinate(row, col)); 
                     }
-                    break; // Dừng khi gặp quân cản (cùng màu hoặc khác màu)
+                    break; 
                 }
-                row += dir[0]; // Tiếp tục đi theo hướng dir
+                row += dir[0];
                 col += dir[1];
             }
         }

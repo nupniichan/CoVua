@@ -125,19 +125,16 @@ public class TrangChu extends JFrame {
         exitButton.setFont(new Font("Arial", Font.PLAIN, 24));
     
         onlineButton.addActionListener(e -> {
-            // Ví dụ: Chuyển đến panel "chessBoard" (bạn cần định nghĩa panel này)
             cardLayout.show(mainPanel, "chessBoard");
         });
 
         offlineButton.addActionListener(e -> {
-            // Khởi tạo ChessBoard cho chế độ chơi offline
             JPanel chessBoardPanel = new ChessBoard();
             mainPanel.add(chessBoardPanel, "chessBoard");
             cardLayout.show(mainPanel, "chessBoard");
         });
 
         aiButton.addActionListener(e -> {
-            // Khởi tạo PlayWithAI cho chế độ chơi với máy
             JPanel aiPanel = new PlayWithAI(); 
             mainPanel.add(aiPanel, "aiGame");
             cardLayout.show(mainPanel, "aiGame");

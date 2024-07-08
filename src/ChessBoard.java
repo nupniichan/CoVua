@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Iterator;
 import java.util.Map;
+import java.awt.event.ActionEvent;
 
 public class ChessBoard extends JPanel implements MouseListener, MouseMotionListener {
 
@@ -160,6 +161,7 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     }
 
     private void movePiece(Coordinate targetCoordinate) {
+        // Lưu trạng thái bàn cờ trước khi di chuyển
         Piece[][] previousBoard = new Piece[8][8];
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
@@ -167,31 +169,95 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
             }
         }
     
+        // Di chuyển quân cờ được chọn đến vị trí mục tiêu
         board[targetCoordinate.row][targetCoordinate.col] = selectedPiece;
         board[selectedPiecePosition.row][selectedPiecePosition.col] = null;
         selectedPiece.setCoordinate(targetCoordinate);
     
+        // Đánh dấu quân cờ đã di chuyển
+        selectedPiece.hasMoved = true;
+    
+        // Kiểm tra xem Vua của người chơi hiện tại có bị chiếu sau nước đi không
         int currentPlayerColor = isWhiteTurn ? Piece.WHITE : Piece.BLACK;
         if (isKingInCheck(currentPlayerColor)) {
+            // Hoàn tác nước đi nếu Vua bị chiếu
             board = previousBoard;
             selectedPiece.setCoordinate(selectedPiecePosition);
             return;
         }
     
-
+        // Xử lý nhập thành (sau khi di chuyển Vua)
+        if (selectedPiece instanceof King && Math.abs(targetCoordinate.col - selectedPiecePosition.col) == 2) {
+            handleCastling(targetCoordinate);
+        }
+    
+        // Kiểm tra xem Vua của đối thủ có bị chiếu sau nước đi không
         int opponentColor = isWhiteTurn ? Piece.BLACK : Piece.WHITE;
         if (isKingInCheck(opponentColor)) {
-    
+            // Kiểm tra chiếu hết
             if (isCheckmate(opponentColor)) {
                 showGameEndScreen(currentPlayerColor == Piece.WHITE);
             }
         }
     
+        // Kiểm tra phong tốt
+        if (selectedPiece instanceof Pawn && (targetCoordinate.row == 0 || targetCoordinate.row == 7)) {
+            promotePawn(targetCoordinate);
+        }
+    
+        // Chuyển lượt
         isWhiteTurn = !isWhiteTurn;
+    
+        // Xóa lựa chọn quân cờ và nước đi hợp lệ
         clearSelection();
+    
+        // Vẽ lại bàn cờ
         repaint();
     }
 
+    private void promotePawn(Coordinate pawnCoordinate) {
+        // Lưu trữ tham chiếu đến quân tốt được phong cấp
+        Piece pawnToPromote = selectedPiece;
+    
+        // Tạo JPopupMenu cho menu phong tốt
+        JPopupMenu promotionMenu = new JPopupMenu();
+    
+        // Thêm các JMenuItem với hình ảnh đại diện cho quân cờ
+        promotionMenu.add(createPromotionMenuItem("Hậu", new ImageIcon("src\\main\\resources\\images\\" + (pawnToPromote.getColor() == Piece.WHITE ? "White" : "Black") + "_Queen.png"), pawnCoordinate, pawnToPromote));
+        promotionMenu.add(createPromotionMenuItem("Xe", new ImageIcon("src\\main\\resources\\images\\" + (pawnToPromote.getColor() == Piece.WHITE ? "White" : "Black") + "_Rook.png"), pawnCoordinate, pawnToPromote));
+        promotionMenu.add(createPromotionMenuItem("Tượng", new ImageIcon("src\\main\\resources\\images\\" + (pawnToPromote.getColor() == Piece.WHITE ? "White" : "Black") + "_Bishop.png"), pawnCoordinate, pawnToPromote));
+        promotionMenu.add(createPromotionMenuItem("Mã", new ImageIcon("src\\main\\resources\\images\\" + (pawnToPromote.getColor() == Piece.WHITE ? "White" : "Black") + "_Knight.png"), pawnCoordinate, pawnToPromote));
+    
+        // Hiển thị menu tại vị trí của tốt
+        promotionMenu.show(this, pawnCoordinate.col * 100, pawnCoordinate.row * 100);
+    }
+    
+    private JMenuItem createPromotionMenuItem(String pieceName, ImageIcon pieceImage, Coordinate pawnCoordinate, Piece pawnToPromote) {
+        JMenuItem menuItem = new JMenuItem(new AbstractAction(pieceName, pieceImage) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Piece newPiece = null;
+                switch (pieceName) {
+                    case "Hậu":
+                        newPiece = new Queen(pawnToPromote.getColor(), pawnCoordinate);
+                        break;
+                    case "Xe":
+                        newPiece = new Rook(pawnToPromote.getColor(), pawnCoordinate);
+                        break;
+                    case "Tượng":
+                        newPiece = new Bishop(pawnToPromote.getColor(), pawnCoordinate);
+                        break;
+                    case "Mã":
+                        newPiece = new Knight(pawnToPromote.getColor(), pawnCoordinate);
+                        break;
+                }
+                board[pawnCoordinate.row][pawnCoordinate.col] = newPiece;
+                repaint();
+            }
+        });
+        return menuItem;
+    }
+    
     private void selectPiece(Piece clickedPiece, Coordinate clickCoordinate) {
         selectedPiece = clickedPiece;
         selectedPiecePosition = clickCoordinate;
@@ -201,13 +267,21 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
         List<Coordinate> possibleMoves = selectedPiece.getPossibleMove(board);
     
         int currentPlayerColor = isWhiteTurn ? Piece.WHITE : Piece.BLACK;
-
+    
         if (isKingInCheck(currentPlayerColor)) {
             for (Iterator<Coordinate> iterator = possibleMoves.iterator(); iterator.hasNext();) {
                 Coordinate move = iterator.next();
                 if (!isValidMoveWhenKingInCheck(selectedPiece.getCoordinate(), move, currentPlayerColor)) {
-                    iterator.remove(); 
+                    iterator.remove();
                 }
+            }
+        }
+    
+        // Thêm nước đi nhập thành (nếu có)
+        if (clickedPiece instanceof King) {
+            List<Coordinate> castlingMoves = ((King) clickedPiece).getValidCastlingMoves(board);
+            for (Coordinate move : castlingMoves) {
+                validMoves.put(move, true);
             }
         }
     
@@ -217,6 +291,25 @@ public class ChessBoard extends JPanel implements MouseListener, MouseMotionList
     
         repaint();
     }
+
+    private void handleCastling(Coordinate kingTarget) {
+        int rookStartCol, rookTargetCol;
+    
+        if (kingTarget.col == 2) { // Nhập thành dài
+            rookStartCol = 0;
+            rookTargetCol = 3;
+        } else { // Nhập thành ngắn
+            rookStartCol = 7;
+            rookTargetCol = 5;
+        }
+    
+        // Di chuyển Xe
+        board[kingTarget.row][rookTargetCol] = board[kingTarget.row][rookStartCol];
+        board[kingTarget.row][rookStartCol] = null;
+        board[kingTarget.row][rookTargetCol].setCoordinate(new Coordinate(kingTarget.row, rookTargetCol));
+        board[kingTarget.row][rookTargetCol].hasMoved = true;
+    }
+
 
     private boolean isValidMoveWhenKingInCheck(Coordinate start, Coordinate end, int kingColor) {
 

@@ -22,6 +22,8 @@ public abstract class Piece {
     protected String name;
     protected ImageIcon image;
 
+    public boolean hasMoved = false;
+
     public Piece(int color, Coordinate coordinate) {
         this.color = color;
         this.coordinate = coordinate;

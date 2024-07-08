@@ -15,7 +15,7 @@ public class Bishop extends Piece {
     @Override
     public List<Coordinate> getPossibleMove(Piece[][] board) {
         List<Coordinate> possibleMoves = new ArrayList<>();
-        int[][] directions = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}}; // 4 hướng chéo
+        int[][] directions = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
 
         for (int[] dir : directions) {
             int row = coordinate.row + dir[0];
@@ -26,11 +26,11 @@ public class Bishop extends Piece {
                     possibleMoves.add(new Coordinate(row, col));
                 } else {
                     if (board[row][col].getColor() != color) {
-                        possibleMoves.add(new Coordinate(row, col)); // Ăn quân
+                        possibleMoves.add(new Coordinate(row, col));
                     }
-                    break; // Dừng khi gặp quân cản (cùng màu hoặc khác màu)
+                    break; 
                 }
-                row += dir[0]; // Tiếp tục đi theo hướng dir
+                row += dir[0]; 
                 col += dir[1];
             }
         }

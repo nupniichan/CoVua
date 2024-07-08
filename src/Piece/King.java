@@ -76,8 +76,55 @@ public class King extends Piece {
             return "Unknown";
         }
     }
+    public List<Coordinate> getValidCastlingMoves(Piece[][] board) {
+        List<Coordinate> validCastlingMoves = new ArrayList<>();
+
+        if (hasMoved || isKingInCheck(color, board)) {
+            return validCastlingMoves; 
+        }
+
+        if (isValidCastlingMove(board, 7)) {
+            validCastlingMoves.add(new Coordinate(coordinate.row, coordinate.col + 2));
+        }
+        
+        if (isValidCastlingMove(board, 0)) {
+            validCastlingMoves.add(new Coordinate(coordinate.row, coordinate.col - 2));
+        }
+
+        return validCastlingMoves;
+    }
+    private boolean isValidCastlingMove(Piece[][] board, int rookCol) {
+        int row = coordinate.row;
+        int direction = (rookCol == 7) ? 1 : -1; 
+
+        // Kiểm tra chướng ngại vật
+        for (int col = coordinate.col + direction; col != rookCol; col += direction) {
+            if (board[row][col] != null) {
+                return false;
+            }
+        }
+
+        // Kiểm tra Xe
+        if (!(board[row][rookCol] instanceof Rook) || board[row][rookCol].hasMoved) {
+            return false;
+        }
+
+        // Kiểm tra ô bị chiếu
+        for (int col = coordinate.col + direction; col != rookCol; col += direction) { // Dừng ở ô trước Xe
+            board[row][col] = this;
+            if (isKingInCheck(color, board)) {
+                board[row][col] = null;
+                return false;
+            }
+            board[row][col] = null;
+        }
+
+        return true;
+    }
+
     @Override
     public int getValue() {
         return KING_POINT; 
     }
+    
 }

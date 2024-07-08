@@ -6,6 +6,7 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.util.*;
 import java.util.List;
+import java.awt.event.ActionEvent;
 
 public class PlayWithAI extends JPanel implements MouseListener, MouseMotionListener {
     private Piece[][] board = new Piece[8][8];
@@ -23,7 +24,7 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
         addMouseMotionListener(this);
 
         endGameButton = new JButton("End Game");
-        endGameButton.addActionListener(e -> showGameEndScreen(true));
+        endGameButton.addActionListener(e -> showGameEndScreen(true)); 
         add(endGameButton);
 
         messageLabel = new JLabel("");
@@ -32,6 +33,7 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
     }
 
     private void initializeBoard() {
+        // Initialize White Pieces
         board[7][0] = new Rook(Piece.WHITE, new Coordinate(7, 0));
         board[7][1] = new Knight(Piece.WHITE, new Coordinate(7, 1));
         board[7][2] = new Bishop(Piece.WHITE, new Coordinate(7, 2));
@@ -44,6 +46,7 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
             board[6][i] = new Pawn(Piece.WHITE, new Coordinate(6, i));
         }
 
+        // Initialize Black Pieces
         board[0][0] = new Rook(Piece.BLACK, new Coordinate(0, 0));
         board[0][1] = new Knight(Piece.BLACK, new Coordinate(0, 1));
         board[0][2] = new Bishop(Piece.BLACK, new Coordinate(0, 2));
@@ -56,17 +59,10 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
             board[1][i] = new Pawn(Piece.BLACK, new Coordinate(1, i));
         }
 
+        // Set the rest of the board to null (empty)
         for (int i = 2; i < 6; i++) {
             for (int j = 0; j < 8; j++) {
                 board[i][j] = null;
-            }
-        }
-
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                if (board[i][j] != null) {
-                    board[i][j].setCoordinate(new Coordinate(i, j));
-                }
             }
         }
     }
@@ -117,9 +113,9 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
                 int y = move.row * 100;
 
                 if (board[move.row][move.col] != null) {
-                    g.setColor(new Color(255, 0, 0, 100));
+                    g.setColor(new Color(255, 0, 0, 100)); // Red for capturing
                 } else {
-                    g.setColor(new Color(0, 255, 0, 100));
+                    g.setColor(new Color(0, 255, 0, 100)); // Green for valid moves
                 }
 
                 g.fillRect(x, y, 100, 100);
@@ -127,7 +123,7 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
         }
 
         if (selectedPiecePosition != null) {
-            g.setColor(new Color(0, 0, 255, 100));
+            g.setColor(new Color(0, 0, 255, 100)); // Blue for selected piece
             int x = selectedPiecePosition.col * 100;
             int y = selectedPiecePosition.row * 100;
             g.fillRect(x, y, 100, 100);
@@ -146,130 +142,158 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
         }
     }
 
-
     private void movePiece(Coordinate targetCoordinate) {
-        Piece[][] previousBoard = new Piece[8][8];
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                previousBoard[i][j] = board[i][j];
-            }
-        }
-
-        board[targetCoordinate.row][targetCoordinate.col] = selectedPiece;
-        board[selectedPiecePosition.row][selectedPiecePosition.col] = null;
-        selectedPiece.setCoordinate(targetCoordinate);
+        Piece[][] previousBoard = cloneBoard(board); 
+        movePiece(board, selectedPiecePosition, targetCoordinate); 
+        selectedPiece.hasMoved = true;
 
         int currentPlayerColor = isWhiteTurn ? Piece.WHITE : Piece.BLACK;
-        if (isKingInCheck(currentPlayerColor)) {
+        if (isKingInCheck(currentPlayerColor)) { 
             board = previousBoard;
             selectedPiece.setCoordinate(selectedPiecePosition);
             return; 
         }
 
+        if (selectedPiece instanceof King && Math.abs(targetCoordinate.col - selectedPiecePosition.col) == 2) {
+            handleCastling(board, targetCoordinate);
+        }
 
-        int opponentColor = isWhiteTurn ? Piece.BLACK : Piece.WHITE;
-        if (isKingInCheck(opponentColor)) {
-
-            if (isCheckmate(opponentColor)) {
-                showGameEndScreen(currentPlayerColor == Piece.WHITE);
-            }
+        if (selectedPiece instanceof Pawn && 
+            (targetCoordinate.row == 0 || targetCoordinate.row == 7)) {
+            promotePawn(targetCoordinate); 
         }
 
         isWhiteTurn = !isWhiteTurn;
         clearSelection();
         repaint();
 
-        if (!isGameOver() && !isWhiteTurn) {
+        if (!isGameOver(board) && !isWhiteTurn) {
             makeAIMove();
         }
     }
+    
+    private void movePiece(Piece[][] board, Coordinate start, Coordinate end) {
+        Piece pieceToMove = board[start.row][start.col];
+        board[end.row][end.col] = pieceToMove;
+        board[start.row][start.col] = null;
+        if (pieceToMove != null) { 
+            pieceToMove.setCoordinate(end);
+            pieceToMove.hasMoved = true; 
+        }
+    }
+
+    private void promotePawn(Coordinate pawnCoordinate) {
+        Piece pawnToPromote = selectedPiece;
+
+        JPopupMenu promotionMenu = new JPopupMenu();
+
+        promotionMenu.add(createPromotionMenuItem("Hậu", new ImageIcon("src\\main\\resources\\images\\" + (pawnToPromote.getColor() == Piece.WHITE ? "White" : "Black") + "_Queen.png"), pawnCoordinate, pawnToPromote));
+        promotionMenu.add(createPromotionMenuItem("Xe", new ImageIcon("src\\main\\resources\\images\\" + (pawnToPromote.getColor() == Piece.WHITE ? "White" : "Black") + "_Rook.png"), pawnCoordinate, pawnToPromote));
+        promotionMenu.add(createPromotionMenuItem("Tượng", new ImageIcon("src\\main\\resources\\images\\" + (pawnToPromote.getColor() == Piece.WHITE ? "White" : "Black") + "_Bishop.png"), pawnCoordinate, pawnToPromote));
+        promotionMenu.add(createPromotionMenuItem("Mã", new ImageIcon("src\\main\\resources\\images\\" + (pawnToPromote.getColor() == Piece.WHITE ? "White" : "Black") + "_Knight.png"), pawnCoordinate, pawnToPromote));
+
+        promotionMenu.show(this, pawnCoordinate.col * 100, pawnCoordinate.row * 100);
+    }
+
+    private JMenuItem createPromotionMenuItem(String pieceName, ImageIcon pieceImage, Coordinate pawnCoordinate, Piece pawnToPromote) {
+        JMenuItem menuItem = new JMenuItem(new AbstractAction(pieceName, pieceImage) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Piece newPiece = null;
+                switch (pieceName) {
+                    case "Hậu":
+                        newPiece = new Queen(pawnToPromote.getColor(), pawnCoordinate);
+                        break;
+                    case "Xe":
+                        newPiece = new Rook(pawnToPromote.getColor(), pawnCoordinate);
+                        break;
+                    case "Tượng":
+                        newPiece = new Bishop(pawnToPromote.getColor(), pawnCoordinate);
+                        break;
+                    case "Mã":
+                        newPiece = new Knight(pawnToPromote.getColor(), pawnCoordinate);
+                        break;
+                }
+                board[pawnCoordinate.row][pawnCoordinate.col] = newPiece;
+                repaint();
+            }
+        });
+        return menuItem;
+    }
 
     private void makeAIMove() {
-        // Sử dụng Minimax để tìm nước đi tốt nhất
-        int depth = 3; // Độ sâu tìm kiếm
-        Move bestMove = minimax(board, depth, true, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        int depth = 3; 
+        Move bestMove = minimax(board, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, true); 
 
         if (bestMove != null) {
             selectedPiece = board[bestMove.start.row][bestMove.start.col];
             selectedPiecePosition = bestMove.start;
-            movePiece(bestMove.end);
+            movePiece(bestMove.end); 
         } else {
-            System.err.println("Không tìm thấy nước đi hợp lệ.");
+            System.err.println("AI has no valid moves!");
         }
     }
 
-    private Move minimax(Piece[][] board, int depth, boolean isMaximizingPlayer, int alpha, int beta) {
+    private Move minimax(Piece[][] board, int depth, int alpha, int beta, boolean isMaximizingPlayer) {
         if (depth == 0 || isGameOver(board)) {
             return new Move(null, null, evaluate(board)); 
         }
-    
-        if (isMaximizingPlayer) {
-            int maxEval = Integer.MIN_VALUE;
-            Move bestMove = null;
-            List<Piece> aiPieces = getAIPieces(board);
-            for (Piece piece : aiPieces) {
-                for (Coordinate move : getValidMovesForPiece(board, piece)) {
-                    Piece[][] newBoard = cloneBoard(board);
-                    movePiece(newBoard, piece.getCoordinate(), move);
-                    Move moveEval = minimax(newBoard, depth - 1, false, alpha, beta);
-                    if (moveEval.evaluation > maxEval) {
-                        maxEval = moveEval.evaluation;
-                        bestMove = new Move(piece.getCoordinate(), move, maxEval);
-                        alpha = Math.max(alpha, maxEval);
-                        if (beta <= alpha) {
-                            return bestMove; // Cắt tỉa alpha-beta
-                        }
+
+        Move bestMove = new Move(null, null, isMaximizingPlayer ? Integer.MIN_VALUE : Integer.MAX_VALUE);
+
+        List<Piece> pieces = isMaximizingPlayer ? getAIPieces(board) : getPlayerPieces(board);
+        for (Piece piece : pieces) {
+            for (Coordinate move : getValidMovesForPiece(board, piece)) {
+                Piece[][] newBoard = cloneBoard(board);
+                movePiece(newBoard, piece.getCoordinate(), move); 
+
+                if (newBoard[move.row][move.col] instanceof King && 
+                    Math.abs(move.col - piece.getCoordinate().col) == 2) {
+                    handleCastling(newBoard, move); 
+                }
+
+                int eval = minimax(newBoard, depth - 1, alpha, beta, !isMaximizingPlayer).evaluation;
+
+                if (isMaximizingPlayer) {
+                    if (eval > bestMove.evaluation) {
+                        bestMove = new Move(piece.getCoordinate(), move, eval);
                     }
+                    alpha = Math.max(alpha, eval);
+                } else {
+                    if (eval < bestMove.evaluation) {
+                        bestMove = new Move(piece.getCoordinate(), move, eval);
+                    }
+                    beta = Math.min(beta, eval);
+                }
+                if (beta <= alpha) {
+                    break; 
                 }
             }
-            return bestMove;
-        } else {
-            int minEval = Integer.MAX_VALUE;
-            Move bestMove = null;
-            List<Piece> playerPieces = getPlayerPieces(board);
-            for (Piece piece : playerPieces) {
-                for (Coordinate move : getValidMovesForPiece(board, piece)) {
-                    Piece[][] newBoard = cloneBoard(board);
-                    movePiece(newBoard, piece.getCoordinate(), move);
-                    Move moveEval = minimax(newBoard, depth - 1, true, alpha, beta);
-                    if (moveEval.evaluation < minEval) {
-                        minEval = moveEval.evaluation;
-                        bestMove = new Move(piece.getCoordinate(), move, minEval);
-                        beta = Math.min(beta, minEval);
-                        if (beta <= alpha) {
-                            return bestMove; // Cắt tỉa alpha-beta
-                        }
-                    }
-                }
-            }
-            return bestMove;
         }
+        return bestMove;
     }
 
-    // Hàm đánh giá bàn cờ
     private int evaluate(Piece[][] board) {
         int score = 0;
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 Piece piece = board[row][col];
                 if (piece != null) {
-                    if (piece.getColor() == Piece.BLACK) {
-                        score += piece.getValue(); 
-                    } else {
-                        score -= piece.getValue(); 
+                    int pieceValue = piece.getValue();
+                    if (piece instanceof Pawn) {
+                        pieceValue += (piece.getColor() == Piece.WHITE) ? (row - 1) * 10 : (6 - row) * 10; 
                     }
+                    score += (piece.getColor() == Piece.BLACK) ? pieceValue : -pieceValue;
                 }
             }
         }
         return score;
     }
-
-    // Hàm kiểm tra xem trò chơi đã kết thúc
+    
     private boolean isGameOver(Piece[][] board) {
-        return false; 
-    }
+        return isCheckmate(board, Piece.WHITE) || isCheckmate(board, Piece.BLACK);
+    } 
 
-    // Hàm lấy danh sách quân cờ của AI (màu đen)
     private List<Piece> getAIPieces(Piece[][] board) {
         List<Piece> aiPieces = new ArrayList<>();
         for (int row = 0; row < 8; row++) {
@@ -283,7 +307,6 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
         return aiPieces;
     }
 
-    // Hàm lấy danh sách quân cờ của người chơi (màu trắng)
     private List<Piece> getPlayerPieces(Piece[][] board) {
         List<Piece> playerPieces = new ArrayList<>();
         for (int row = 0; row < 8; row++) {
@@ -297,10 +320,14 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
         return playerPieces;
     }
 
-    // Hàm lấy danh sách nước đi hợp lệ cho một quân cờ
     private List<Coordinate> getValidMovesForPiece(Piece[][] board, Piece piece) {
         List<Coordinate> validMoves = new ArrayList<>();
         List<Coordinate> possibleMoves = piece.getPossibleMove(board);
+
+        if (piece instanceof King) {
+            possibleMoves.addAll(((King) piece).getValidCastlingMoves(board));
+        }
+
         for (Coordinate move : possibleMoves) {
             if (isValidMoveWhenKingInCheck(board, piece.getCoordinate(), move, piece.getColor())) {
                 validMoves.add(move);
@@ -309,7 +336,6 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
         return validMoves;
     }
 
-    // Hàm kiểm tra xem nước đi có hợp lệ khi vua đang bị chiếu
     private boolean isValidMoveWhenKingInCheck(Piece[][] board, Coordinate start, Coordinate end, int kingColor) {
         Piece originalPiece = board[end.row][end.col];
         board[end.row][end.col] = board[start.row][start.col];
@@ -323,11 +349,10 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
         return isValid;
     }
 
-    // Hàm kiểm tra xem vua có đang bị chiếu
     private boolean isKingInCheck(Piece[][] board, int kingColor) {
         Coordinate kingCoordinate = findKingCoordinate(board, kingColor);
         if (kingCoordinate == null) {
-            return false;
+            return false; 
         }
 
         for (int row = 0; row < 8; row++) {
@@ -336,15 +361,14 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
                 if (piece != null && piece.getColor() != kingColor) {
                     List<Coordinate> possibleMoves = piece.getPossibleMove(board);
                     if (possibleMoves.contains(kingCoordinate)) {
-                        return true;
+                        return true; 
                     }
                 }
             }
         }
-        return false;
+        return false; 
     }
 
-    // Hàm tìm tọa độ của vua
     private Coordinate findKingCoordinate(Piece[][] board, int kingColor) {
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
@@ -354,17 +378,44 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
                 }
             }
         }
-        return null;
+        return null; 
     }
 
-    // Hàm di chuyển quân cờ
-    private void movePiece(Piece[][] board, Coordinate start, Coordinate end) {
-        board[end.row][end.col] = board[start.row][start.col];
-        board[start.row][start.col] = null;
-        board[end.row][end.col].setCoordinate(end);
+    private boolean isCheckmate(Piece[][] board, int kingColor) {
+        if (!isKingInCheck(board, kingColor)) {
+            return false; 
+        }
+
+        Coordinate kingCoordinate = findKingCoordinate(board, kingColor);
+        if (kingCoordinate != null) {
+            Piece king = board[kingCoordinate.row][kingCoordinate.col];
+            if (getValidMovesForPiece(board, king).size() > 0) {
+                return false; 
+            }
+        }
+
+        return true; 
     }
 
-    // Hàm tạo bản sao của bàn cờ
+    private void handleCastling(Piece[][] board, Coordinate kingTarget) {
+        int rookStartCol, rookTargetCol;
+        if (kingTarget.col == 2) { // Nhập thành bên trái
+            rookStartCol = 0;
+            rookTargetCol = 3;
+        } else { // Nhập thành bên phải
+            rookStartCol = 7;
+            rookTargetCol = 5;
+        }
+    
+        // Di chuyển Xe
+        board[kingTarget.row][rookTargetCol] = board[kingTarget.row][rookStartCol];
+        board[kingTarget.row][rookStartCol] = null;
+        board[kingTarget.row][rookTargetCol].setCoordinate(new Coordinate(kingTarget.row, rookTargetCol));
+    
+        // Đánh dấu Xe đã được di chuyển
+        board[kingTarget.row][rookTargetCol].hasMoved = true; 
+    }
+
     private Piece[][] cloneBoard(Piece[][] board) {
         Piece[][] newBoard = new Piece[8][8];
         for (int i = 0; i < 8; i++) {
@@ -384,13 +435,13 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
                     } else if (board[i][j] instanceof Pawn) {
                         newBoard[i][j] = new Pawn(board[i][j].getColor(), newCoordinate);
                     }
+                    newBoard[i][j].hasMoved = board[i][j].hasMoved;
                 }
             }
         }
         return newBoard;
     }
 
-    // Class Move
     private class Move {
         Coordinate start;
         Coordinate end;
@@ -403,45 +454,37 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
         }
     }
 
-    // Các hàm còn lại của class PlayWithAI
     private void selectPiece(Piece clickedPiece, Coordinate clickCoordinate) {
         selectedPiece = clickedPiece;
         selectedPiecePosition = clickCoordinate;
-        validMoves = new HashMap<>();
-
-        messageLabel.setText("Đã bấm vào quân cờ " + clickedPiece.getType() + " " + clickedPiece.getColorString());
+        validMoves = new HashMap<>(); 
+    
+        messageLabel.setText("Selected: " + clickedPiece.getType() + " (" + clickedPiece.getColorString() + ")");
+    
         List<Coordinate> possibleMoves = selectedPiece.getPossibleMove(board);
-
+    
+        // **Thêm phần này để tính đến nước đi nhập thành:**
+        if (selectedPiece instanceof King) {
+            possibleMoves.addAll(((King) selectedPiece).getValidCastlingMoves(board));
+        }
+        // **Hết phần bổ sung**
+    
         int currentPlayerColor = isWhiteTurn ? Piece.WHITE : Piece.BLACK;
-
         if (isKingInCheck(currentPlayerColor)) {
             Iterator<Coordinate> iterator = possibleMoves.iterator();
             while (iterator.hasNext()) {
                 Coordinate move = iterator.next();
-                if (!isValidMoveWhenKingInCheck(selectedPiece.getCoordinate(), move, currentPlayerColor)) {
+                if (!isValidMoveWhenKingInCheck(board, selectedPiece.getCoordinate(), move, currentPlayerColor)) {
                     iterator.remove();
                 }
             }
         }
-
+    
         for (Coordinate move : possibleMoves) {
-            validMoves.put(move, true);
+            validMoves.put(move, true); 
         }
-
+    
         repaint();
-    }
-
-    private boolean isValidMoveWhenKingInCheck(Coordinate start, Coordinate end, int kingColor) {
-        Piece originalPiece = board[end.row][end.col];
-        board[end.row][end.col] = board[start.row][start.col];
-        board[start.row][start.col] = null;
-
-        boolean isValid = !isKingInCheck(kingColor);
-
-        board[start.row][start.col] = board[end.row][end.col];
-        board[end.row][end.col] = originalPiece;
-
-        return isValid;
     }
 
     private void clearSelection() {
@@ -464,7 +507,7 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
                 if (piece != null && piece.getColor() != kingColor) {
                     List<Coordinate> possibleMoves = piece.getPossibleMove(board);
                     if (possibleMoves.contains(kingCoordinate)) {
-                        return true;
+                        return true; 
                     }
                 }
             }
@@ -481,49 +524,7 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
                 }
             }
         }
-        return null;
-    }
-
-    private boolean isCheckmate(int kingColor) {
-        if (!isKingInCheck(kingColor)) {
-            return false;
-        }
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                Piece piece = board[row][col];
-                if (piece != null && piece.getColor() == kingColor) {
-                    List<Coordinate> possibleMoves = piece.getPossibleMove(board);
-                    for (Coordinate targetMove : possibleMoves) {
-                        Piece originalPiece = board[targetMove.row][targetMove.col];
-                        board[targetMove.row][targetMove.col] = piece;
-                        board[piece.getCoordinate().row][piece.getCoordinate().col] = null;
-                        Coordinate originalCoordinate = piece.getCoordinate();
-                        piece.setCoordinate(targetMove);
-
-                        if (!isKingInCheck(kingColor)) {
-                            board[targetMove.row][targetMove.col] = originalPiece;
-                            board[originalCoordinate.row][originalCoordinate.col] = piece;
-                            piece.setCoordinate(originalCoordinate);
-                            return false;
-                        }
-
-                        board[targetMove.row][targetMove.col] = originalPiece;
-                        board[originalCoordinate.row][originalCoordinate.col] = piece;
-                        piece.setCoordinate(originalCoordinate);
-                    }
-                }
-            }
-        }
-        return true;
-    }
-
-
-    private boolean isGameOver() {
-        return false;
-    }
-
-    private boolean determineWinner() {
-        return true;
+        return null; 
     }
 
     @Override
@@ -559,6 +560,7 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
     }
 
     private void showGameEndScreen(boolean isWhiteWin) {
-        new GameEndScreen(isWhiteWin);
+        // You'll likely want to implement a more elaborate GameEndScreen
+        new GameEndScreen(isWhiteWin); 
     }
 }
