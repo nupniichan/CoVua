@@ -1,5 +1,9 @@
+package PlayWithAI;
 import Piece.*;
+import menu.GameEndScreen;
+
 import javax.swing.*;
+
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -560,7 +564,6 @@ public class PlayWithAI extends JPanel implements MouseListener, MouseMotionList
     }
 
     private void showGameEndScreen(boolean isWhiteWin) {
-        // You'll likely want to implement a more elaborate GameEndScreen
         new GameEndScreen(isWhiteWin); 
     }
 }

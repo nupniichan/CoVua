@@ -1,11 +1,19 @@
+package menu;
+
 import javax.swing.*;
+import OnlinePlaying.ChessClient;
+import OnlinePlaying.PlayOnline;
+import PlayTogether.ChessBoard;
+import PlayWithAI.PlayWithAI;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 
 public class TrangChu extends JFrame {
     private CardLayout cardLayout = new CardLayout();
     private JPanel mainPanel = new JPanel(cardLayout);
+    private ChessClient client;
 
     public TrangChu() {
         setTitle("Cờ vua");
@@ -13,13 +21,13 @@ public class TrangChu extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
+        client = new ChessClient();
+
         JPanel homePanel = createHomePanel();
         JPanel modePanel = createModePanel();
-        // Không cần khởi tạo ChessBoard ở đây nữa
 
         mainPanel.add(homePanel, "home");
         mainPanel.add(modePanel, "mode");
-        // Không cần thêm chessBoardPanel vào đây nữa
 
         add(mainPanel);
 
@@ -106,7 +114,6 @@ public class TrangChu extends JFrame {
     
     private JPanel createModePanel() {
         BackgroundPanel panel = new BackgroundPanel("src\\main\\resources\\images\\MAIN.jpg");
-        System.out.println();
         panel.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -124,9 +131,7 @@ public class TrangChu extends JFrame {
         JButton exitButton = new JButton("Thoát");
         exitButton.setFont(new Font("Arial", Font.PLAIN, 24));
     
-        onlineButton.addActionListener(e -> {
-            cardLayout.show(mainPanel, "chessBoard");
-        });
+        onlineButton.addActionListener(e -> showConnectDialog());
 
         offlineButton.addActionListener(e -> {
             JPanel chessBoardPanel = new ChessBoard();
@@ -154,7 +159,35 @@ public class TrangChu extends JFrame {
         panel.add(exitButton, gbc);
     
         return panel;
-    }    
+    }
+
+    private void showConnectDialog() {
+        JTextField ipField = new JTextField(15);
+        JTextField portField = new JTextField(5);
+        portField.setText("12345"); // Default port
+
+        JPanel panel = new JPanel(new GridLayout(2, 2));
+        panel.add(new JLabel("Địa chỉ IP:"));
+        panel.add(ipField);
+        panel.add(new JLabel("Cổng:"));
+        panel.add(portField);
+
+        int result = JOptionPane.showConfirmDialog(null, panel, "Kết nối tới server", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result == JOptionPane.OK_OPTION) {
+            String ip = ipField.getText();
+            int port = Integer.parseInt(portField.getText());
+
+            try {
+                client.startConnection(ip, port); // Kết nối tới server
+                JPanel playOnlinePanel = new PlayOnline(client);
+                mainPanel.add(playOnlinePanel, "playOnline");
+                cardLayout.show(mainPanel, "playOnline");
+            } catch (IOException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Không thể kết nối tới server!", "Lỗi kết nối", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {

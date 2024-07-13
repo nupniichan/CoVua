@@ -1,4 +1,8 @@
+package menu;
 import javax.swing.*;
+
+import PlayTogether.ChessBoard;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
