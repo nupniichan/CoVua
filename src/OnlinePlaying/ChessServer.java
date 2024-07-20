@@ -1,56 +1,92 @@
 package OnlinePlaying;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ChessServer {
-    private ServerSocket serverSocket;
-
-    public ChessServer(int port) throws IOException {
-        serverSocket = new ServerSocket(port);
-        System.out.println("Server is running on port " + port);
-    }
-
-    public void start() throws IOException {
-        // Tạo một luồng riêng để lắng nghe thông điệp UDP
-        new Thread(() -> {
-            try (DatagramSocket udpSocket = new DatagramSocket(4445)) {
-                byte[] buf = new byte[256];
-                while (true) {
-                    DatagramPacket packet = new DatagramPacket(buf, buf.length);
-                    udpSocket.receive(packet);
-                    String received = new String(packet.getData(), 0, packet.getLength());
-                    if (received.equals("DISCOVER_SERVER_REQUEST")) {
-                        String response = "DISCOVER_SERVER_RESPONSE";
-                        buf = response.getBytes();
-                        InetAddress address = packet.getAddress();
-                        int port = packet.getPort();
-                        packet = new DatagramPacket(buf, buf.length, address, port);
-                        udpSocket.send(packet);
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }).start();
-
-        while (true) {
-            Socket clientSocket = serverSocket.accept();
-            System.out.println("New client connected");
-            new ClientHandler(clientSocket).start();
-        }
-    }
+    private static final int PORT = 12345;
+    public List<PlayerHandler> players = new ArrayList<>();
 
     public static void main(String[] args) {
-        try {
-            ChessServer server = new ChessServer(12345); // Port 12345
-            server.start();
+        ChessServer server = new ChessServer();
+        server.start();
+    }
+
+    public void start() {
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            System.out.println("ChessServer: Server started on port " + PORT);
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("ChessServer: Client connected: " + clientSocket.getInetAddress());
+                PlayerHandler playerHandler = new PlayerHandler(clientSocket, this);
+                players.add(playerHandler);
+                new Thread(playerHandler).start();
+            }
         } catch (IOException e) {
+            System.err.println("ChessServer: Lỗi server: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    public synchronized void broadcast(String message, PlayerHandler sender) {
+        for (PlayerHandler player : players) {
+            if (player != sender) {
+                player.sendMessage(message);
+            }
+        }
+    }
+
+    public synchronized void removePlayer(PlayerHandler player) {
+        players.remove(player);
+        broadcast("PLAYER_DISCONNECTED " + player.getUsername(), player);
+        if (player.opponent != null) {
+            player.opponent.opponent = null; 
+            player.opponent.sendMessage("OPPONENT_DISCONNECTED");
+        }
+    }
+
+    public PlayerHandler findPlayer(String username) {
+        for (PlayerHandler player : players) {
+            if (player.getUsername().equals(username)) {
+                return player;
+            }
+        }
+        return null;
+    }
+
+    public synchronized void handleChallenge(String challengerName, String challengedName) {
+        PlayerHandler challenger = findPlayer(challengerName);
+        PlayerHandler challenged = findPlayer(challengedName);
+
+        if (challenger == null || challenged == null) {
+            if (challenger != null) {
+                challenger.sendMessage("CHALLENGE_FAILED " + challengedName + " không online.");
+            }
+            return;
+        }
+
+        if (challenged.opponent != null) {
+            challenger.sendMessage("CHALLENGE_FAILED " + challengedName + " đang trong một ván đấu khác.");
+            return;
+        }
+        challenged.sendMessage("CHALLENGE " + challengerName);
+    }
+
+    public synchronized void startGame(PlayerHandler player1, PlayerHandler player2) {
+        player1.setOpponent(player2);
+        player2.setOpponent(player1);
+
+        // Gửi message "GAME_START" cho cả hai client
+        player1.sendMessage("GAME_START"); 
+        player2.sendMessage("GAME_START");
+
+        // Gửi màu cờ và thông báo lượt chơi đầu tiên
+        player1.sendMessage("START WHITE"); 
+        player1.isTurn = true;
+        player2.sendMessage("START BLACK");
+        player2.isTurn = false;
     }
 }

@@ -1,4 +1,5 @@
 package OnlinePlaying;
+
 import javax.swing.*;
 
 import Piece.Bishop;
@@ -30,9 +31,12 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
     private boolean isWhiteTurn = true;
     private JLabel messageLabel;
     private ChessClient client;
+    private boolean myTurn;
+    private String myColor; 
 
     public PlayOnline(ChessClient client) {
         this.client = client;
+
         setPreferredSize(new Dimension(800, 800));
         initializeBoard();
         addMouseListener(this);
@@ -43,9 +47,48 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
         messageLabel = new JLabel("");
         messageLabel.setBounds(10, 750, 300, 20);
         add(messageLabel);
+
+        // Nhận thông tin màu cờ từ server
+        try {
+            String startMessage = client.receiveMessage();
+            if (startMessage != null && startMessage.startsWith("START")) {
+                String color = startMessage.split(" ")[1];
+                client.receiveColor(color); // Cập nhật màu cờ cho client
+                myColor = client.isWhite() ? "WHITE" : "BLACK";
+                myTurn = client.isTurn; // Khởi tạo myTurn dựa trên màu cờ
+
+                System.out.println("PlayOnline: Được khởi tạo với màu " + myColor + ", lượt: " + myTurn);
+
+                // Thêm dòng này để bắt đầu vòng lặp nhận message từ server
+                startReceivingMessages(); 
+            } else {
+                System.err.println("PlayOnline: Không nhận được message START từ server!");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("PlayOnline: Lỗi khi nhận message START từ server!");
+        }
     }
 
+    private void startReceivingMessages() {
+        new Thread(() -> {
+            try {
+                while (true) {
+                    String message = client.receiveMessage();
+                    System.out.println("Client " + myColor + " nhận được message: " + message);
+                    if (message != null) {
+                        // ... (Xử lý các message như "MOVE", "YOUR_TURN", "OPPONENT_TURN")
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                System.err.println("PlayOnline: Lỗi khi nhận message từ server!");
+            }
+        }).start();
+    }
+    
     private void initializeBoard() {
+        // Khởi tạo bàn cờ cho người chơi trắng
         board[7][0] = new Rook(Piece.WHITE, new Coordinate(7, 0));
         board[7][1] = new Knight(Piece.WHITE, new Coordinate(7, 1));
         board[7][2] = new Bishop(Piece.WHITE, new Coordinate(7, 2));
@@ -58,6 +101,7 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
             board[6][i] = new Pawn(Piece.WHITE, new Coordinate(6, i));
         }
 
+        // Khởi tạo bàn cờ cho người chơi đen
         board[0][0] = new Rook(Piece.BLACK, new Coordinate(0, 0));
         board[0][1] = new Knight(Piece.BLACK, new Coordinate(0, 1));
         board[0][2] = new Bishop(Piece.BLACK, new Coordinate(0, 2));
@@ -70,12 +114,14 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
             board[1][i] = new Pawn(Piece.BLACK, new Coordinate(1, i));
         }
 
+        // Các ô còn lại rỗng
         for (int i = 2; i < 6; i++) {
             for (int j = 0; j < 8; j++) {
                 board[i][j] = null;
             }
         }
 
+        // Đặt lại tọa độ cho tất cả các quân cờ
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 if (board[i][j] != null) {
@@ -114,8 +160,13 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
                     Piece piece = board[i][j];
                     ImageIcon image = piece.getImage();
                     if (image != null) {
-                        int x = piece.getCoordinate().col * 100 + (100 - image.getIconWidth()) / 2;
-                        int y = piece.getCoordinate().row * 100 + (100 - image.getIconHeight()) / 2;
+                        int row = i, col = j;
+                        if (myColor.equals("BLACK")) {
+                            row = 7 - i;
+                            col = 7 - j;
+                        }
+                        int x = col * 100 + (100 - image.getIconWidth()) / 2;
+                        int y = row * 100 + (100 - image.getIconHeight()) / 2;
                         image.paintIcon(this, g, x, y);
                     }
                 }
@@ -148,43 +199,53 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
     }
 
     private void handleMouseClick(Coordinate clickCoordinate) {
-        Piece clickedPiece = board[clickCoordinate.row][clickCoordinate.col];
-    
-        if (clickedPiece == null) {
-            if (selectedPiece != null && validMoves != null && validMoves.containsKey(clickCoordinate)) {
-                // Di chuyển quân cờ nếu nước đi hợp lệ
-                movePiece(clickCoordinate);
-                // Gửi thông điệp nước đi đến server
-                try {
-                    client.sendMessage("MOVE " + selectedPiecePosition.row + " " + selectedPiecePosition.col + " " + clickCoordinate.row + " " + clickCoordinate.col);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                clearSelection();
-            }
-        } else {
-            if (clickedPiece.getColor() == (isWhiteTurn ? Piece.WHITE : Piece.BLACK)) {
-                selectPiece(clickedPiece, clickCoordinate);
-            } else {
+        if (myTurn) { 
+            Piece clickedPiece = board[clickCoordinate.row][clickCoordinate.col];
+
+            if (clickedPiece == null) {
                 if (selectedPiece != null && validMoves != null && validMoves.containsKey(clickCoordinate)) {
-                    // Di chuyển quân cờ nếu nước đi hợp lệ
                     movePiece(clickCoordinate);
-                    // Gửi thông điệp nước đi đến server
                     try {
-                        client.sendMessage("MOVE " + selectedPiecePosition.row + " " + selectedPiecePosition.col + " " + clickCoordinate.row + " " + clickCoordinate.col);
-                    } catch (IOException e) {
+                        String message = "MOVE " + selectedPiecePosition.row + " " +
+                                selectedPiecePosition.col + " " +
+                                clickCoordinate.row + " " + clickCoordinate.col;
+                        client.sendMessage(message);
+                        System.out.println("Client " + myColor + " đã gửi message: " + message);
+
+                        myTurn = false; 
+                        isWhiteTurn = !isWhiteTurn; 
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                 } else {
-                    clearSelection();
+                    clearSelection(); 
+                }
+            } else {
+                if (clickedPiece.getColorString().equals(myColor)) { 
+                    selectPiece(clickedPiece, clickCoordinate);
+                } else { 
+                    if (selectedPiece != null && validMoves != null && validMoves.containsKey(clickCoordinate)) {
+                        movePiece(clickCoordinate);
+                        try {
+                            String message = "MOVE " + selectedPiecePosition.row + " " +
+                                    selectedPiecePosition.col + " " +
+                                    clickCoordinate.row + " " + clickCoordinate.col;
+                            client.sendMessage(message);
+                            myTurn = false;
+                            isWhiteTurn = !isWhiteTurn;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        clearSelection(); 
+                    }
                 }
             }
         }
     }
 
     private void movePiece(Coordinate targetCoordinate) {
-        // Lưu trạng thái bàn cờ trước khi di chuyển
+        // Lưu lại trạng thái bàn cờ trước khi di chuyển
         Piece[][] previousBoard = new Piece[8][8];
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
@@ -192,66 +253,59 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
             }
         }
 
-        // Di chuyển quân cờ được chọn đến vị trí mục tiêu
+        // Di chuyển quân cờ
         board[targetCoordinate.row][targetCoordinate.col] = selectedPiece;
         board[selectedPiecePosition.row][selectedPiecePosition.col] = null;
         selectedPiece.setCoordinate(targetCoordinate);
-
-        // Đánh dấu quân cờ đã di chuyển
         selectedPiece.hasMoved = true;
 
-        // Kiểm tra xem Vua của người chơi hiện tại có bị chiếu sau nước đi không
+        // Kiểm tra xem vua của người chơi hiện tại có đang bị chiếu tướng không
         int currentPlayerColor = isWhiteTurn ? Piece.WHITE : Piece.BLACK;
         if (isKingInCheck(currentPlayerColor)) {
-            // Hoàn tác nước đi nếu Vua bị chiếu
+            // Nếu vua bị chiếu tướng, hãy hủy bỏ nước đi
             board = previousBoard;
             selectedPiece.setCoordinate(selectedPiecePosition);
             return;
         }
 
-        // Xử lý nhập thành (sau khi di chuyển Vua)
+        // Xử lý nhập thành
         if (selectedPiece instanceof King && Math.abs(targetCoordinate.col - selectedPiecePosition.col) == 2) {
             handleCastling(targetCoordinate);
         }
 
-        // Kiểm tra xem Vua của đối thủ có bị chiếu sau nước đi không
+        // Kiểm tra chiếu tướng và chiếu hết cho đối thủ
         int opponentColor = isWhiteTurn ? Piece.BLACK : Piece.WHITE;
         if (isKingInCheck(opponentColor)) {
-            // Kiểm tra chiếu hết
             if (isCheckmate(opponentColor)) {
-                showGameEndScreen(currentPlayerColor == Piece.WHITE);
+                showGameEndScreen(myColor.equals("WHITE")); 
             }
         }
 
-        // Kiểm tra phong tốt
+        // Phong cấp tốt
         if (selectedPiece instanceof Pawn && (targetCoordinate.row == 0 || targetCoordinate.row == 7)) {
             promotePawn(targetCoordinate);
         }
 
-        // Chuyển lượt
+        
         isWhiteTurn = !isWhiteTurn;
-
-        // Xóa lựa chọn quân cờ và nước đi hợp lệ
+        try {
+            client.sendMessage("TURN " + (isWhiteTurn ? "WHITE" : "BLACK"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         clearSelection();
-
-        // Vẽ lại bàn cờ
         repaint();
     }
 
     private void promotePawn(Coordinate pawnCoordinate) {
-        // Lưu trữ tham chiếu đến quân tốt được phong cấp
         Piece pawnToPromote = selectedPiece;
-
-        // Tạo JPopupMenu cho menu phong tốt
         JPopupMenu promotionMenu = new JPopupMenu();
 
-        // Thêm các JMenuItem với hình ảnh đại diện cho quân cờ
         promotionMenu.add(createPromotionMenuItem("Hậu", new ImageIcon("src\\main\\resources\\images\\" + (pawnToPromote.getColor() == Piece.WHITE ? "White" : "Black") + "_Queen.png"), pawnCoordinate, pawnToPromote));
         promotionMenu.add(createPromotionMenuItem("Xe", new ImageIcon("src\\main\\resources\\images\\" + (pawnToPromote.getColor() == Piece.WHITE ? "White" : "Black") + "_Rook.png"), pawnCoordinate, pawnToPromote));
         promotionMenu.add(createPromotionMenuItem("Tượng", new ImageIcon("src\\main\\resources\\images\\" + (pawnToPromote.getColor() == Piece.WHITE ? "White" : "Black") + "_Bishop.png"), pawnCoordinate, pawnToPromote));
         promotionMenu.add(createPromotionMenuItem("Mã", new ImageIcon("src\\main\\resources\\images\\" + (pawnToPromote.getColor() == Piece.WHITE ? "White" : "Black") + "_Knight.png"), pawnCoordinate, pawnToPromote));
 
-        // Hiển thị menu tại vị trí của tốt
         promotionMenu.show(this, pawnCoordinate.col * 100, pawnCoordinate.row * 100);
     }
 
@@ -291,6 +345,7 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
 
         int currentPlayerColor = isWhiteTurn ? Piece.WHITE : Piece.BLACK;
 
+        // Loại bỏ các nước đi không hợp lệ khi vua đang bị chiếu tướng
         if (isKingInCheck(currentPlayerColor)) {
             for (Iterator<Coordinate> iterator = possibleMoves.iterator(); iterator.hasNext();) {
                 Coordinate move = iterator.next();
@@ -300,7 +355,7 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
             }
         }
 
-        // Thêm nước đi nhập thành (nếu có)
+        // Thêm các nước đi nhập thành hợp lệ cho vua
         if (clickedPiece instanceof King) {
             List<Coordinate> castlingMoves = ((King) clickedPiece).getValidCastlingMoves(board);
             for (Coordinate move : castlingMoves) {
@@ -308,6 +363,7 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
             }
         }
 
+        // Thêm các nước đi hợp lệ khác
         for (Coordinate move : possibleMoves) {
             validMoves.put(move, true);
         }
@@ -318,21 +374,21 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
     private void handleCastling(Coordinate kingTarget) {
         int rookStartCol, rookTargetCol;
 
-        if (kingTarget.col == 2) { // Nhập thành dài
+        if (kingTarget.col == 2) { 
             rookStartCol = 0;
             rookTargetCol = 3;
-        } else { // Nhập thành ngắn
+        } else { 
             rookStartCol = 7;
             rookTargetCol = 5;
         }
 
-        // Di chuyển Xe
         board[kingTarget.row][rookTargetCol] = board[kingTarget.row][rookStartCol];
         board[kingTarget.row][rookStartCol] = null;
         board[kingTarget.row][rookTargetCol].setCoordinate(new Coordinate(kingTarget.row, rookTargetCol));
         board[kingTarget.row][rookTargetCol].hasMoved = true;
     }
 
+    // Kiểm tra xem nước đi có hợp lệ khi vua đang bị chiếu tướng hay không
     private boolean isValidMoveWhenKingInCheck(Coordinate start, Coordinate end, int kingColor) {
         Piece originalPiece = board[end.row][end.col];
         board[end.row][end.col] = board[start.row][start.col];
@@ -354,6 +410,7 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
         repaint();
     }
 
+    // Kiểm tra xem vua có đang bị chiếu tướng không
     private boolean isKingInCheck(int kingColor) {
         Coordinate kingCoordinate = findKingCoordinate(kingColor);
         if (kingCoordinate == null) {
@@ -374,6 +431,7 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
         return false;
     }
 
+    // Tìm tọa độ của vua
     private Coordinate findKingCoordinate(int kingColor) {
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
@@ -386,32 +444,21 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
         return null;
     }
 
+    // Kiểm tra xem vua có đang bị chiếu hết không
     private boolean isCheckmate(int kingColor) {
         if (!isKingInCheck(kingColor)) {
             return false;
         }
+
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 Piece piece = board[row][col];
                 if (piece != null && piece.getColor() == kingColor) {
                     List<Coordinate> possibleMoves = piece.getPossibleMove(board);
                     for (Coordinate targetMove : possibleMoves) {
-                        Piece originalPiece = board[targetMove.row][targetMove.col];
-                        board[targetMove.row][targetMove.col] = piece;
-                        board[piece.getCoordinate().row][piece.getCoordinate().col] = null;
-                        Coordinate originalCoordinate = piece.getCoordinate();
-                        piece.setCoordinate(targetMove);
-
-                        if (!isKingInCheck(kingColor)) {
-                            board[targetMove.row][targetMove.col] = originalPiece;
-                            board[originalCoordinate.row][originalCoordinate.col] = piece;
-                            piece.setCoordinate(originalCoordinate);
+                        if (isValidMoveWhenKingInCheck(piece.getCoordinate(), targetMove, kingColor)) {
                             return false;
                         }
-
-                        board[targetMove.row][targetMove.col] = originalPiece;
-                        board[originalCoordinate.row][originalCoordinate.col] = piece;
-                        piece.setCoordinate(originalCoordinate);
                     }
                 }
             }
@@ -419,6 +466,26 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
         return true;
     }
 
+
+    // Nhận nước đi từ server và cập nhật bàn cờ
+    public void receiveMove(int startRow, int startCol, int endRow, int endCol) {
+        SwingUtilities.invokeLater(() -> {
+            Coordinate startCoordinate = new Coordinate(startRow, startCol);
+            Coordinate endCoordinate = new Coordinate(endRow, endCol);
+
+            selectedPiece = board[startCoordinate.row][startCoordinate.col];
+            selectedPiecePosition = startCoordinate;
+
+            movePiece(endCoordinate); 
+
+            isWhiteTurn = !isWhiteTurn;
+            myTurn = true; // Kích hoạt lại lượt của người chơi sau khi nhận nước đi từ đối thủ
+            System.out.println("Nước đi đã được cập nhật từ Server.");
+            repaint();
+        });
+    }
+
+    // Hiển thị màn hình kết thúc game
     private void showGameEndScreen(boolean isWhiteWin) {
         new GameEndScreen(isWhiteWin);
     }
@@ -429,10 +496,18 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
 
     @Override
     public void mousePressed(MouseEvent e) {
-        int x = e.getX() / 100;
-        int y = e.getY() / 100;
-        Coordinate clickCoordinate = new Coordinate(y, x);
-        handleMouseClick(clickCoordinate);
+        if (myTurn) { 
+            int x = e.getX() / 100;
+            int y = e.getY() / 100;
+
+            if (myColor.equals("BLACK")) { 
+                x = 7 - x;
+                y = 7 - y;
+            }
+
+            Coordinate clickCoordinate = new Coordinate(y, x);
+            handleMouseClick(clickCoordinate);
+        }
     }
 
     @Override
@@ -460,7 +535,7 @@ public class PlayOnline extends JPanel implements MouseListener, MouseMotionList
             JFrame frame = new JFrame("Chess Game");
             ChessClient client = new ChessClient();
             try {
-                client.startConnection("127.0.0.1", 12345);
+                client.startConnection("127.0.0.1", 12345); 
                 PlayOnline playOnline = new PlayOnline(client);
                 frame.add(playOnline);
                 frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
