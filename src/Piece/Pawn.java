@@ -55,7 +55,7 @@ public class Pawn extends Piece {
 
     @Override
     public String getColorString() {
-        return (color == WHITE) ? "White" : "Black";
+        return (color == WHITE) ? "WHITE" : "BLACK";
     }
     @Override
     public int getValue() {

@@ -209,7 +209,6 @@ public class TrangChu extends JFrame {
         }
     }
 
-
     private void showOnlineLobby() {
         JDialog lobbyDialog = new JDialog(this, "Phòng chờ online", true);
         lobbyDialog.setSize(400, 300);
@@ -227,7 +226,6 @@ public class TrangChu extends JFrame {
         buttonPanel.add(refreshButton);
         lobbyDialog.add(buttonPanel, BorderLayout.SOUTH);
     
-        // Lắng nghe sự kiện click button "Làm mới"
         refreshButton.addActionListener(e -> {
             try {
                 listModel.clear();
@@ -246,7 +244,6 @@ public class TrangChu extends JFrame {
             }
         });
     
-        // Lắng nghe sự kiện click button "Thách đấu"
         challengeButton.addActionListener(e -> {
             String challengedPlayer = playerList.getSelectedValue();
             if (challengedPlayer != null) {
@@ -259,7 +256,6 @@ public class TrangChu extends JFrame {
             }
         });
     
-        // Gửi yêu cầu lấy danh sách người chơi khi mở dialog
         try {
             client.sendMessage("GET_PLAYERS");
             String playerListResponse = client.receiveMessage();
@@ -277,7 +273,6 @@ public class TrangChu extends JFrame {
     
         lobbyDialog.setVisible(true);
     
-        // Xử lý message từ server trong một thread riêng
         new Thread(() -> {
             try {
                 while (true) {
@@ -290,33 +285,37 @@ public class TrangChu extends JFrame {
                                 JOptionPane.YES_NO_OPTION);
                         if (choice == JOptionPane.YES_OPTION) {
                             client.sendMessage("ACCEPT_CHALLENGE " + challengerName);
-                            // Không cần gọi startOnlineGame() ở đây nữa
                         } else {
                             client.sendMessage("DENY_CHALLENGE " + challengerName);
                         }
                     } else if (message.startsWith("CHALLENGE_ACCEPTED")) {
-                        // Không cần gọi startOnlineGame() ở đây nữa
+                        // Không cần làm gì thêm ở đây
                     } else if (message.startsWith("CHALLENGE_FAILED")) {
                         String reason = message.substring("CHALLENGE_FAILED ".length());
                         JOptionPane.showMessageDialog(lobbyDialog, "Thách đấu thất bại: " + reason);
                     } else if (message.startsWith("GAME_START")) {
-                        startOnlineGame(); 
-                        lobbyDialog.dispose(); 
+                        SwingUtilities.invokeLater(() -> {
+                            startOnlineGame();
+                            lobbyDialog.dispose();
+                        });
+                        break;
                     }
                 }
             } catch (IOException e) {
-                // Xử lý lỗi kết nối
-                e.printStackTrace(); 
+                e.printStackTrace();
                 JOptionPane.showMessageDialog(lobbyDialog, "Mất kết nối đến server!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             }
         }).start();
     }
-
+    
     private void startOnlineGame() {
+        System.out.println("Starting online game...");
         JPanel playOnlinePanel = new PlayOnline(client);
         mainPanel.add(playOnlinePanel, "playOnline");
         cardLayout.show(mainPanel, "playOnline");
+        System.out.println("Switched to playOnline panel.");
     }
+    
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             new TrangChu().setVisible(true);

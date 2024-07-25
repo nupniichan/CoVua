@@ -10,116 +10,112 @@ public class PlayerHandler implements Runnable {
     private Socket clientSocket;
     private PrintWriter out;
     private BufferedReader in;
-    private String username;
     private ChessServer server;
-    public PlayerHandler opponent; // Đối thủ của người chơi
-    public boolean isTurn; // Theo dõi lượt của người chơi
+    private String username;
 
     public PlayerHandler(Socket socket, ChessServer server) {
         this.clientSocket = socket;
         this.server = server;
         try {
-            this.out = new PrintWriter(clientSocket.getOutputStream(), true); 
-            this.in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            out = new PrintWriter(clientSocket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         } catch (IOException e) {
-            System.err.println("PlayerHandler: Lỗi khi tạo PlayerHandler: " + e.getMessage());
+            System.err.println("Error setting up player handler: " + e.getMessage());
+            e.printStackTrace();
         }
     }
-    
+
     @Override
     public void run() {
         try {
             String inputLine;
             while ((inputLine = in.readLine()) != null) {
-                System.out.println("Nhận từ " + username + ": " + inputLine);
-                handleMessage(inputLine);
+                System.out.println(username + " says: " + inputLine);
+                processCommand(inputLine);
             }
         } catch (IOException e) {
-            System.out.println("Người chơi ngắt kết nối: " + username);
+            System.err.println("Error handling client input: " + e.getMessage());
+            e.printStackTrace();
         } finally {
-            try {
-                in.close();
-                out.close();
-                clientSocket.close();
-            } catch (IOException e) {
-                System.err.println("Lỗi khi đóng kết nối: " + e.getMessage());
-            }
-            server.removePlayer(this); // Xóa người chơi khỏi server
+            closeConnection();
         }
     }
 
-    private void handleMessage(String message) {
-        String[] parts = message.split(" ", 2);
-        String command = parts[0];
-
-        switch (command) {
-            case "GET_PLAYERS": // Yêu cầu lấy danh sách người chơi
-                sendPlayerList();
-                break;
-            case "USERNAME": // Nhận tên người dùng khi kết nối
-                this.username = parts[1];
-                System.out.println("Người chơi đã kết nối: " + username);
-                break;
-            case "CHALLENGE": // Xử lý yêu cầu thách đấu
-                server.handleChallenge(this.username, parts[1]);
-                break;
-            case "ACCEPT_CHALLENGE": // Xử lý chấp nhận thách đấu
-                PlayerHandler challengedPlayer = server.findPlayer(parts[1]);
+    private void processCommand(String inputLine) {
+        if (inputLine.startsWith("USERNAME")) {
+            this.username = inputLine.split(" ")[1];
+            sendMessage("USERNAME_ACCEPTED");
+        } else if (inputLine.equals("GET_PLAYERS")) {
+            if (this.username != null) {
+                StringBuilder playersList = new StringBuilder("PLAYERS ");
+                for (PlayerHandler player : server.getPlayers()) {
+                    if (!player.getUsername().equals(this.getUsername())) {
+                        playersList.append(player.getUsername()).append(",");
+                    }
+                }
+                sendMessage(playersList.toString());
+            } else {
+                sendMessage("USERNAME_NOT_SET");
+            }
+        } else if (inputLine.startsWith("CHALLENGE")) {
+            if (this.username != null) {
+                String challengedUsername = inputLine.split(" ")[1];
+                PlayerHandler challengedPlayer = server.getPlayerByUsername(challengedUsername);
                 if (challengedPlayer != null) {
-                    server.startGame(this, challengedPlayer);
-                }
-                break;
-            case "MOVE": // Xử lý nước đi của người chơi
-                if (opponent != null) {
-                    opponent.sendMessage(message);
-                    // Đổi lượt chơi sau khi di chuyển
-                    isTurn = !isTurn;
-                    opponent.isTurn = !opponent.isTurn; 
+                    challengedPlayer.sendMessage("CHALLENGE " + this.username);
                 } else {
-                    System.err.println("Lỗi: Chưa tìm thấy đối thủ.");
-                    sendMessage("ERROR_OPPONENT_NOT_FOUND"); // Thông báo lỗi cho client
+                    sendMessage("CHALLENGE_FAILED User not found");
                 }
-                break;
-            case "DENY_CHALLENGE": // Xử lý từ chối thách đấu
-                PlayerHandler challenger = server.findPlayer(parts[1]);
-                if (challenger != null) {
-                    challenger.sendMessage("CHALLENGE_DENIED " + this.username);
-                }
-                break;
-            // Xử lý các message khác từ client ở đây...
-            default:
-                System.err.println("Lệnh không hợp lệ: " + command);
-                break;
-        }
-    }
-
-    // Gửi danh sách người chơi cho client
-    private void sendPlayerList() {
-        StringBuilder playerList = new StringBuilder("PLAYERS ");
-        for (PlayerHandler player : server.players) {
-            if (player != this) { // Không bao gồm chính người chơi đó trong danh sách
-                playerList.append(player.getUsername()).append(",");
+            } else {
+                sendMessage("USERNAME_NOT_SET");
+            }
+        } else if (inputLine.startsWith("ACCEPT_CHALLENGE")) {
+            String challengerUsername = inputLine.split(" ")[1];
+            PlayerHandler challenger = server.getPlayerByUsername(challengerUsername);
+            if (challenger != null) {
+                challenger.sendMessage("CHALLENGE_ACCEPTED " + this.username);
+                // Bắt đầu trò chơi cho cả hai người chơi
+                sendMessage("GAME_START");
+                challenger.sendMessage("GAME_START");
+                // Gửi thông điệp START đến cả hai người chơi
+                sendMessage("START WHITE");
+                challenger.sendMessage("START BLACK");
+            }
+        } else if (inputLine.startsWith("DENY_CHALLENGE")) {
+            String challengerUsername = inputLine.split(" ")[1];
+            PlayerHandler challenger = server.getPlayerByUsername(challengerUsername);
+            if (challenger != null) {
+                challenger.sendMessage("CHALLENGE_DENIED " + this.username);
+            }
+        } else if (inputLine.startsWith("MOVE")) {
+            // Xử lý thông điệp MOVE từ một người chơi và gửi đến đối thủ
+            String[] parts = inputLine.split(" ");
+            String move = parts[1] + " " + parts[2] + " " + parts[3] + " " + parts[4];
+            PlayerHandler opponent = server.getOpponent(this);
+            if (opponent != null) {
+                opponent.sendMessage("MOVE " + move);
             }
         }
-        // Xóa dấu phẩy thừa ở cuối chuỗi
-        if (playerList.lastIndexOf(",") == playerList.length() - 1) {
-            playerList.deleteCharAt(playerList.length() - 1);
-        }
-        sendMessage(playerList.toString());
+        // Các lệnh khác ở đây...
     }
-
-    // Gửi message đến client
+    
+    
     public void sendMessage(String message) {
         out.println(message);
     }
 
-    // Lấy tên người dùng
-    public String getUsername() {
-        return username;
+    public void closeConnection() {
+        try {
+            in.close();
+            out.close();
+            clientSocket.close();
+            server.removePlayer(this);
+        } catch (IOException e) {
+            System.err.println("Error closing player connection: " + e.getMessage());
+        }
     }
 
-    // Thiết lập đối thủ cho người chơi
-    public void setOpponent(PlayerHandler opponent) {
-        this.opponent = opponent;
+    public String getUsername() {
+        return username;
     }
 }

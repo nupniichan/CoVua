@@ -81,4 +81,21 @@ public abstract class Piece {
     }
     public abstract String getType();
     public abstract String getColorString();
+    public String getShortName() {
+        if (this instanceof King) {
+            return (color == WHITE) ? "WK" : "BK"; 
+        } else if (this instanceof Queen) {
+            return (color == WHITE) ? "WQ" : "BQ"; 
+        } else if (this instanceof Rook) {
+            return (color == WHITE) ? "WR" : "BR";
+        } else if (this instanceof Bishop) {
+            return (color == WHITE) ? "WB" : "BB"; 
+        } else if (this instanceof Knight) {
+            return (color == WHITE) ? "WN" : "BN"; 
+        } else if (this instanceof Pawn) {
+            return (color == WHITE) ? "WP" : "BP"; 
+        } else {
+            return "--"; // Ô trống
+        }
+    }
 }

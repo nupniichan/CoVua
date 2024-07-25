@@ -69,9 +69,9 @@ public class King extends Piece {
     @Override
     public String getColorString() {
         if (color == WHITE) {
-            return "White";
+            return "WHITE";
         } else if (color == BLACK) {
-            return "Black";
+            return "BLACK";
         } else {
             return "Unknown";
         }
